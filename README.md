@@ -2,6 +2,18 @@
 
 This was nightmare, as I was only able to bruteforce it because I lack understanding. This is now a working firmware for the ESP32 Sense Xiao OV3660 but perhaps also OV5640 or other. 
 
-All of the initial idea came from https://community.home-assistant.io/t/seeed-xaio-esp32s3-with-ov5640-camera-success/856181/3 User: Steve_Campell
+All of the initial idea, code or anything came from https://community.home-assistant.io/t/seeed-xaio-esp32s3-with-ov5640-camera-success/856181/3 User: Steve_Campell (https://community.home-assistant.io/u/steve_campbell/summary) 
 
-# 
+## Change Value
+
+All value only change after a restart 
+
+# UI ESPHome
+
+![](esphome.png)
+
+# UI Home Assitant 
+
+![](ha1.png)
+
+![](ha2.png)
