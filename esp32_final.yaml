@@ -288,7 +288,7 @@ wifi:
 
 api:
   encryption:
-    key: "FrZw66Nk7dC5bzBKrqNh5vBoSOb8/SEf1VDVDP6qgT0="
+    key: your key
   on_client_connected:
     then:
       - logger.log: "Wi-Fi connected"
