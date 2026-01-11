@@ -1,0 +1,472 @@
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+  platformio_options:
+    board_build.mcu: esp32s3
+    build_flags: -DBOARD_HAS_PSRAM
+    board_build.arduino.memory_type: qio_opi
+    board_build.f_flash: 80000000L
+    board_build.flash_mode: qio
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          id(g_vflip) = false;
+          id(g_hmirror) = true;
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+    version: latest
+
+substitutions:
+  name: esphome-web-20c368
+  friendly_name: Seeed Xaio w/Camera 20C368
+
+  camera_sda_pin: GPIO40
+  camera_scl_pin: GPIO39
+  camera_vsync_pin: GPIO38
+  camera_href_pin: GPIO47
+  camera_pclk_pin: GPIO13
+  camera_xclk_pin: GPIO10
+  camera_power_pin: GPIO1
+  user_led_pin: GPIO21
+
+  camera_resolution: 1280X1024
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+globals:
+  - id: g_vflip
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+  - id: g_hmirror
+    type: bool
+    restore_value: true
+    initial_value: "true"
+
+script:
+  # Apply all "color-ish" settings together, every time any slider changes
+  - id: apply_color_settings
+    mode: restart
+    then:
+      - lambda: |-
+          id(seeed_camera).set_brightness((int) id(cam_brightness_num).state);
+          id(seeed_camera).set_contrast((int) id(cam_contrast_num).state);
+          id(seeed_camera).set_saturation((int) id(cam_saturation_num).state);
+
+          const char *wb = id(cam_white_balance).current_option();
+          const char *fx = id(cam_effect).current_option();
+
+          using namespace esphome::esp32_camera;
+
+          // WB
+          if (strcmp(wb, "sunny") == 0) id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_SUNNY);
+          else if (strcmp(wb, "cloudy") == 0) id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_CLOUDY);
+          else if (strcmp(wb, "office") == 0) id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_OFFICE);
+          else if (strcmp(wb, "home") == 0) id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_HOME);
+          else id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_AUTO);
+
+          // FX
+          if (strcmp(fx, "negative") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_NEGATIVE);
+          else if (strcmp(fx, "grayscale") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_GRAYSCALE);
+          else if (strcmp(fx, "red_tint") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_RED_TINT);
+          else if (strcmp(fx, "green_tint") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_GREEN_TINT);
+          else if (strcmp(fx, "blue_tint") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_BLUE_TINT);
+          else if (strcmp(fx, "sepia") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_SEPIA);
+          else id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_NONE);
+          ESP_LOGI("cam_apply", "apply_camera_settings() finished");
+
+  - id: apply_camera_settings
+    mode: restart
+    then:
+      - lambda: |-
+          id(seeed_camera).set_vertical_flip(id(g_vflip));
+          id(seeed_camera).set_horizontal_mirror(id(g_hmirror));
+          id(seeed_camera).set_jpeg_quality((int) id(cam_jpeg_quality_num).state);
+      - script.execute: apply_color_settings
+
+esp32_camera:
+  name: "Seeed XIAO ESP32-S3 Camera"
+  id: seeed_camera
+
+  data_pins:
+    - GPIO15
+    - GPIO17
+    - GPIO18
+    - GPIO16
+    - GPIO14
+    - GPIO12
+    - GPIO11
+    - GPIO48
+
+  vsync_pin: ${camera_vsync_pin}
+  href_pin: ${camera_href_pin}
+  pixel_clock_pin: ${camera_pclk_pin}
+
+  external_clock:
+    pin: ${camera_xclk_pin}
+    frequency: 20MHz
+
+  i2c_pins:
+    sda: ${camera_sda_pin}
+    scl: ${camera_scl_pin}
+
+  # If your wiring supports it, consider letting the component manage PWDN:
+  # power_down_pin: ${camera_power_pin}
+
+  on_stream_start:
+    then:
+      - delay: 200ms
+      - script.execute: apply_camera_settings
+
+  max_framerate: 15fps
+  idle_framerate: 0.1fps
+
+  resolution: ${camera_resolution}
+  jpeg_quality: 10
+
+  vertical_flip: false
+  horizontal_mirror: true
+
+  brightness: 0
+  contrast: 0
+  saturation: 0
+  special_effect: none
+
+  aec_mode: auto
+  aec2: false
+  ae_level: 0
+  aec_value: 300
+
+  agc_mode: auto
+  agc_gain_ceiling: 2x
+  agc_value: 0
+
+  wb_mode: auto
+
+web_server:
+  port: 80
+
+switch:
+  - platform: template
+    name: "Reset Camera"
+    id: reset_camera_settings
+    turn_on_action:
+      - lambda: |-
+          id(cam_brightness_num).publish_state(0);
+          id(cam_contrast_num).publish_state(0);
+          id(cam_saturation_num).publish_state(0);
+          id(cam_jpeg_quality_num).publish_state(10);
+          id(g_vflip) = false;
+          id(g_hmirror) = true;
+          id(cam_white_balance).publish_state("auto");
+          id(cam_effect).publish_state("none");
+      - script.execute: apply_camera_settings
+      - switch.turn_off: reset_camera_settings
+
+  - platform: template
+    name: "Cam Vertical Flip"
+    id: cam_vflip_sw
+    internal: true
+    restore_mode: ALWAYS_OFF
+    lambda: |-
+      return id(g_vflip);
+    turn_on_action:
+      - lambda: |-
+          id(g_vflip) = true;
+      - script.execute: apply_camera_settings
+    turn_off_action:
+      - lambda: |-
+          id(g_vflip) = false;
+      - script.execute: apply_camera_settings
+
+  - platform: template
+    name: "Cam Horizontal Mirror"
+    id: cam_hmirror_sw
+    internal: true
+    restore_mode: ALWAYS_ON
+    lambda: |-
+      return id(g_hmirror);
+    turn_on_action:
+      - lambda: |-
+          id(g_hmirror) = true;
+      - script.execute: apply_camera_settings
+    turn_off_action:
+      - lambda: |-
+          id(g_hmirror) = false;
+      - script.execute: apply_camera_settings
+
+number:
+  - platform: template
+    name: "Cam Brightness"
+    id: cam_brightness_num
+    min_value: -2
+    max_value: 2
+    step: 1
+    restore_value: true
+    initial_value: 0
+    set_action:
+      - script.execute: apply_color_settings
+
+  - platform: template
+    name: "Cam Contrast"
+    id: cam_contrast_num
+    min_value: -2
+    max_value: 2
+    step: 1
+    restore_value: true
+    initial_value: 0
+    set_action:
+      - script.execute: apply_color_settings
+
+  - platform: template
+    name: "Cam Saturation"
+    id: cam_saturation_num
+    min_value: -2
+    max_value: 2
+    step: 1
+    restore_value: true
+    initial_value: 0
+    set_action:
+      - script.execute: apply_color_settings
+
+  - platform: template
+    name: "Cam JPEG Quality"
+    id: cam_jpeg_quality_num
+    min_value: 10
+    max_value: 63
+    step: 1
+    restore_value: true
+    initial_value: 10
+    set_action:
+      - script.execute: apply_camera_settings
+
+select:
+  - platform: template
+    name: "Cam White Balance"
+    id: cam_white_balance
+    optimistic: true
+    restore_value: true
+    options: [auto, sunny, cloudy, office, home]
+    initial_option: auto
+    set_action:
+      - script.execute: apply_camera_settings
+
+  - platform: template
+    name: "Cam Special Effect"
+    id: cam_effect
+    optimistic: true
+    restore_value: true
+    options: [none, negative, grayscale, red_tint, green_tint, blue_tint, sepia]
+    initial_option: none
+    set_action:
+      - script.execute: apply_camera_settings
+
+light:
+  - platform: monochromatic
+    output: onboard_user_led
+    name: "Onboard LED"
+    id: onboard_led
+
+output:
+  - platform: ledc
+    pin: ${user_led_pin}
+    id: onboard_user_led
+    frequency: 5000
+    inverted: true
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+  encryption:
+    key: "FrZw66Nk7dC5bzBKrqNh5vBoSOb8/SEf1VDVDP6qgT0="
+  on_client_connected:
+    then:
+      - logger.log: "Wi-Fi connected"
+      - component.update: wifi_ip_address
+
+ota:
+  - platform: esphome
+
+logger:
+
+sensor:
+  - platform: uptime
+    name: "Uptime"
+    id: esp_uptime
+    accuracy_decimals: 0
+    icon: mdi:clock-start
+    update_interval: 60s
+    entity_category: diagnostic
+    internal: true
+    filters:
+      - delta: 60
+
+  - platform: internal_temperature
+    name: "ESP Onboard Temp (°C)"
+    id: esp_onboard_temp_c
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    icon: mdi:temperature-celsius
+    update_interval: 600s
+    entity_category: diagnostic
+    device_class: temperature
+    state_class: measurement
+    on_value:
+      then:
+        - component.update: esp_onboard_temp_f
+
+  - platform: template
+    name: "ESP Onboard Temp (°F)"
+    id: esp_onboard_temp_f
+    accuracy_decimals: 1
+    icon: mdi:temperature-fahrenheit
+    unit_of_measurement: "°F"
+    update_interval: never
+    entity_category: diagnostic
+    device_class: temperature
+    state_class: measurement
+    lambda: |-
+      if (!id(esp_onboard_temp_c).has_state()) return NAN;
+      return id(esp_onboard_temp_c).state * 9.0 / 5.0 + 32.0;
+
+  - platform: wifi_signal
+    name: "WiFi Signal RSSI"
+    id: wifi_signal_db
+    accuracy_decimals: 0
+    icon: mdi:wifi-strength-outline
+    update_interval: 600s
+    device_class: signal_strength
+    entity_category: diagnostic
+    filters:
+      - delta: 2
+
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "WiFi Signal %"
+    id: wifi_signal_pct
+    accuracy_decimals: 0
+    icon: mdi:wifi-strength-outline
+    unit_of_measurement: "%"
+    entity_category: diagnostic
+    device_class: signal_strength
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+      - delta: 2
+
+text_sensor:
+  - platform: template
+    name: "ESP Uptime (DHM)"
+    id: uptime_dhm
+    icon: mdi:clock-outline
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      uint32_t uptime_sec = (uint32_t)id(esp_uptime).state;
+      uint32_t days = uptime_sec / 86400;
+      uint32_t hours = (uptime_sec % 86400) / 3600;
+      uint32_t minutes = (uptime_sec % 3600) / 60;
+
+      char buffer[32];
+      snprintf(buffer, sizeof(buffer), "%ud %02uh %02um", days, hours, minutes);
+      return std::string(buffer);
+
+  - platform: version
+    name: "ESP Firmware Version"
+    id: esp_firmware_version
+    icon: mdi:information-variant
+    entity_category: diagnostic
+    hide_timestamp: true
+
+  - platform: template
+    name: "ESP WiFi IP Address"
+    id: wifi_ip_address
+    update_interval: 120s
+    icon: mdi:ip-outline
+    entity_category: diagnostic
+    lambda: |-
+      static std::string last_ip;
+      std::string current_ip = id(wifi_ip_address_raw).state;
+      if (current_ip.empty() || current_ip == last_ip) return {};
+      last_ip = current_ip;
+      return current_ip;
+
+  - platform: wifi_info
+    ip_address:
+      name: "WiFi IP Address (raw)"
+      id: wifi_ip_address_raw
+      icon: mdi:ip-outline
+      entity_category: diagnostic
+      internal: true
+
+    ssid:
+      name: "WiFi SSID"
+      id: wifi_ssid
+      icon: mdi:ip-outline
+      entity_category: diagnostic
+
+    mac_address:
+      name: "WiFi MAC Address"
+      id: wifi_mac_address
+      icon: mdi:ip-outline
+      entity_category: diagnostic
+
+  - platform: template
+    name: "WiFi MAC Address (compact)"
+    id: wifi_mac_address_stripped
+    icon: mdi:ip-outline
+    update_interval: 600s
+    entity_category: diagnostic
+    lambda: |-
+      auto mac = id(wifi_mac_address).state;
+      std::string stripped_mac;
+      for (char c : mac) if (c != ':') stripped_mac += c;
+      return stripped_mac;
+
+  - platform: template
+    name: "WiFi MAC Address [6]"
+    id: wifi_mac_address_last_6
+    icon: mdi:ip-outline
+    update_interval: 600s
+    entity_category: diagnostic
+    lambda: |-
+      auto mac = id(wifi_mac_address).state;
+      std::string stripped_mac;
+      for (char c : mac) if (c != ':') stripped_mac += c;
+      return stripped_mac.substr(stripped_mac.length() - 6);
+
+  - platform: template
+    name: "Camera Resolution (configured)"
+    id: cam_resolution_configured
+    icon: mdi:image-size-select-large
+    entity_category: diagnostic
+    lambda: |-
+      return std::string("${camera_resolution}");
+
+binary_sensor:
+  - platform: status
+    name: "ESP HA Connection Status"
+    id: esp_ha_connected_status
+    icon: mdi:cloud-check
+    device_class: connectivity
+    entity_category: diagnostic
+
+button:
+  - platform: restart
+    name: "ESP Restart"
+    id: esp_restart_btn
+    icon: mdi:power-cycle
+    entity_category: diagnostic
+    on_press:
+      then:
+        - logger.log:
+            format: "Restart triggered on ESP [${friendly_name}]"
