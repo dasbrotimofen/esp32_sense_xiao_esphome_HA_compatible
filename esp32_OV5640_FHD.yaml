@@ -283,8 +283,11 @@ output:
     inverted: true
 
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
+  ap:
+    ssid: "XIAO-Camera-Setup"
+    password: "configureme"
+
+captive_portal:
 
 api:
   encryption:
