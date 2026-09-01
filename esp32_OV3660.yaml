@@ -61,26 +61,39 @@ script:
           id(seeed_camera).set_contrast((int) id(cam_contrast_num).state);
           id(seeed_camera).set_saturation((int) id(cam_saturation_num).state);
 
-          const char *wb = id(cam_white_balance).current_option();
-          const char *fx = id(cam_effect).current_option();
+          auto wb = id(cam_white_balance).current_option();
+          auto fx = id(cam_effect).current_option();
 
           using namespace esphome::esp32_camera;
 
           // WB
-          if (strcmp(wb, "sunny") == 0) id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_SUNNY);
-          else if (strcmp(wb, "cloudy") == 0) id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_CLOUDY);
-          else if (strcmp(wb, "office") == 0) id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_OFFICE);
-          else if (strcmp(wb, "home") == 0) id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_HOME);
-          else id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_AUTO);
+          if (wb == "sunny")
+            id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_SUNNY);
+          else if (wb == "cloudy")
+            id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_CLOUDY);
+          else if (wb == "office")
+            id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_OFFICE);
+          else if (wb == "home")
+            id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_HOME);
+          else
+            id(seeed_camera).set_wb_mode(ESP32WhiteBalanceMode::ESP32_WB_MODE_AUTO);
 
           // FX
-          if (strcmp(fx, "negative") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_NEGATIVE);
-          else if (strcmp(fx, "grayscale") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_GRAYSCALE);
-          else if (strcmp(fx, "red_tint") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_RED_TINT);
-          else if (strcmp(fx, "green_tint") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_GREEN_TINT);
-          else if (strcmp(fx, "blue_tint") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_BLUE_TINT);
-          else if (strcmp(fx, "sepia") == 0) id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_SEPIA);
-          else id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_NONE);
+          if (fx == "negative")
+            id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_NEGATIVE);
+          else if (fx == "grayscale")
+            id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_GRAYSCALE);
+          else if (fx == "red_tint")
+            id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_RED_TINT);
+          else if (fx == "green_tint")
+            id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_GREEN_TINT);
+          else if (fx == "blue_tint")
+            id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_BLUE_TINT);
+          else if (fx == "sepia")
+            id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_SEPIA);
+          else
+            id(seeed_camera).set_special_effect(ESP32SpecialEffect::ESP32_SPECIAL_EFFECT_NONE);
+
           ESP_LOGI("cam_apply", "apply_camera_settings() finished");
 
   - id: apply_camera_settings
@@ -283,6 +296,9 @@ output:
     inverted: true
 
 wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
   ap:
     ssid: "XIAO-Camera-Setup"
     password: "configureme"
@@ -291,7 +307,7 @@ captive_portal:
 
 api:
   encryption:
-    key: your key
+    key: !secret api_encryption_key
   on_client_connected:
     then:
       - logger.log: "Wi-Fi connected"
