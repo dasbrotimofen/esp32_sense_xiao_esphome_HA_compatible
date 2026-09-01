@@ -396,7 +396,14 @@ text_sensor:
       uint32_t minutes = (uptime_sec % 3600) / 60;
 
       char buffer[32];
-      snprintf(buffer, sizeof(buffer), "%ud %02uh %02um", days, hours, minutes);
+      snprintf(
+        buffer,
+        sizeof(buffer),
+        "%lud %02luh %02lum",
+        (unsigned long) days,
+        (unsigned long) hours,
+        (unsigned long) minutes
+      );
       return std::string(buffer);
 
   - platform: version
