@@ -291,7 +291,7 @@ captive_portal:
 
 api:
   encryption:
-    key: "your key"
+    key: !secret api_encryption_key
   on_client_connected:
     then:
       - logger.log: "Wi-Fi connected"
